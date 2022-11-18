@@ -45,7 +45,7 @@ class BrpcConan(ConanFile):
         os.unlink(zip_name)
         with tools.chdir(self.zip_folder_name):
             # TODO: switch to conandata.yml approach
-            tools.patch(patch_file="../patches/brpc-1.3.0.patch", strip=1)
+            tools.patch(patch_file='../patches/brpc-%s.patch' % self.version, strip=1)
 
             # # add snappy to list of libs to link with if with_snappy is true
             # if self.options.with_snappy:
