@@ -8,7 +8,7 @@ class BrpcConan(ConanFile):
     license = "https://github.com/apache/incubator-brpc/blob/1.3.0/LICENSE"
     url = "https://github.com/jjkoshy/conan-recipes/conan-brpc"
     description = "An industrial-grade RPC framework used throughout Baidu"
-    settings = "os", "os_build", "compiler", "build_type", "arch", "arch_build"
+    settings = "os", "compiler", "build_type", "arch", "arch_build"
     options = {
             "shared": [True, False],
             # see the leveldb recipe in conan-leveldb/conanfile.py for why we
@@ -29,6 +29,9 @@ class BrpcConan(ConanFile):
 
     def config(self):
         # must build protobuf with zlib since brpc build does not make it optional
+        self.options['glog'].shared = False
+        self.options['gflags'].shared = False
+        self.options['gflags'].nothreads = False
         self.options['protobuf'].with_zlib = True
         self.options['leveldb'].with_snappy = self.options.with_snappy
 
@@ -65,7 +68,7 @@ class BrpcConan(ConanFile):
                 'BUILD_BRPC_TOOLS': False,
             })
         return cmake
-    
+
     def build(self):
         cmake = self.configure_cmake()
         cmake.build()
@@ -79,4 +82,3 @@ class BrpcConan(ConanFile):
         self.cpp_info.libs = ["brpc"]
         if self.settings.os == "Linux":
             self.cpp_info.libs.append("pthread")
-

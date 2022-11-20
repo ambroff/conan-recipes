@@ -7,7 +7,7 @@ class BraftConan(ConanFile):
     license = "https://github.com/baidu/braft/blob/master/LICENSE"
     url = "https://github.com/jjkoshy/conan-recipes/conan-braft"
     description = "An industrial-grade C++ implementation of RAFT consensus algorithm based on brpc"
-    settings = "os", "os_build", "compiler", "build_type", "arch", "arch_build"
+    settings = "os", "compiler", "build_type", "arch", "arch_build"
     options = {
             "shared": [True, False],
             "with_snappy": [True, False] }
@@ -24,7 +24,8 @@ class BraftConan(ConanFile):
     exports_sources = ('patches/*',)
 
     def config(self):
-        self.options['gflags'].shared = True
+        self.options['glog'].shared = False
+        self.options['gflags'].shared = False
         self.options['gflags'].nothreads = False
         self.options['leveldb'].with_snappy = self.options.with_snappy
 
@@ -69,4 +70,3 @@ class BraftConan(ConanFile):
         self.cpp_info.libs = ["brpc"]
         if self.settings.os == "Linux":
             self.cpp_info.libs.append("pthread")
-
