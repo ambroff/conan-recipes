@@ -1,20 +1,32 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 9edc0a68..e4078332 100644
+index 9edc0a681c0b..c1e92ae35fb4 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -72,9 +72,10 @@ include(GNUInstallDirs)
+@@ -72,31 +72,18 @@ include(GNUInstallDirs)
  
  configure_file(${PROJECT_SOURCE_DIR}/config.h.in ${PROJECT_SOURCE_DIR}/src/butil/config.h @ONLY)
  
 -set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 +list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
  
- find_package(GFLAGS REQUIRED)
+-find_package(GFLAGS REQUIRED)
++find_package(GFLAGS CONFIG REQUIRED)
 +find_package(OpenSSL REQUIRED)
  
- execute_process(
-     COMMAND bash -c "grep \"namespace [_A-Za-z0-9]\\+ {\" ${GFLAGS_INCLUDE_PATH}/gflags/gflags_declare.h | head -1 | awk '{print $2}' | tr -d '\n'"
-@@ -92,11 +93,6 @@ include_directories(
+-execute_process(
+-    COMMAND bash -c "grep \"namespace [_A-Za-z0-9]\\+ {\" ${GFLAGS_INCLUDE_PATH}/gflags/gflags_declare.h | head -1 | awk '{print $2}' | tr -d '\n'"
+-    OUTPUT_VARIABLE GFLAGS_NS
+-)
+-if(${GFLAGS_NS} STREQUAL "GFLAGS_NAMESPACE")
+-    execute_process(
+-        COMMAND bash -c "grep \"#define GFLAGS_NAMESPACE [_A-Za-z0-9]\\+\" ${GFLAGS_INCLUDE_PATH}/gflags/gflags_declare.h | head -1 | awk '{print $3}' | tr -d '\n'"
+-        OUTPUT_VARIABLE GFLAGS_NS
+-    )
+-endif()
++set(GFLAGS_NS gflags)
+ 
+ include_directories(
+     ${PROJECT_SOURCE_DIR}/src
      ${CMAKE_CURRENT_BINARY_DIR}
  )
  
@@ -26,7 +38,16 @@ index 9edc0a68..e4078332 100644
  if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
      include(CheckFunctionExists)
      CHECK_FUNCTION_EXISTS(clock_gettime HAVE_CLOCK_GETTIME)
-@@ -182,7 +178,7 @@ if(WITH_MESALINK)
+@@ -144,7 +131,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+     endif()
+ endif()
+ 
+-find_package(Protobuf REQUIRED)
++find_package(Protobuf CONFIG REQUIRED)
+ find_package(Threads REQUIRED)
+ 
+ find_path(LEVELDB_INCLUDE_PATH NAMES leveldb/db.h)
+@@ -182,7 +169,7 @@ if(WITH_MESALINK)
      include_directories(${MESALINK_INCLUDE_PATH})
  endif()
  
@@ -35,18 +56,29 @@ index 9edc0a68..e4078332 100644
  if(NOT PROTOC_LIB)
      message(FATAL_ERROR "Fail to find protoc lib")
  endif()
-@@ -204,23 +200,23 @@ include_directories(
+@@ -196,31 +183,31 @@ endif()
+ find_package(OpenSSL)
+ 
+ include_directories(
+-        ${GFLAGS_INCLUDE_PATH}
+-        ${PROTOBUF_INCLUDE_DIRS}
++        ${gflags_INCLUDE_DIRS}
++        ${protobuf_INCLUDE_DIRS}
+         ${LEVELDB_INCLUDE_PATH}
+         ${OPENSSL_INCLUDE_DIR}
+         )
  
  set(DYNAMIC_LIB
-     ${GFLAGS_LIBRARY}
+-    ${GFLAGS_LIBRARY}
 -    ${PROTOBUF_LIBRARIES}
-+    ${Protobuf_LIBRARIES}
      ${LEVELDB_LIB}
      ${PROTOC_LIB}
      ${CMAKE_THREAD_LIBS_INIT}
      ${THRIFT_LIB}
      ${THRIFTNB_LIB}
 -    ${OPENSSL_CRYPTO_LIBRARY}
++    gflags::gflags
++    protobuf::libprotobuf
 +    OpenSSL::Crypto
      dl
      z)
@@ -64,7 +96,7 @@ index 9edc0a68..e4078332 100644
  if(WITH_GLOG)
      set(DYNAMIC_LIB ${DYNAMIC_LIB} ${GLOG_LIB})
 diff --git a/cmake/FindGFLAGS.cmake b/cmake/FindGFLAGS.cmake
-index dfad5fd8..ee45aa1e 100644
+index dfad5fd8a097..ee45aa1e582b 100644
 --- a/cmake/FindGFLAGS.cmake
 +++ b/cmake/FindGFLAGS.cmake
 @@ -24,7 +24,8 @@ if (GFLAGS_STATIC)
@@ -77,3 +109,55 @@ index dfad5fd8..ee45aa1e 100644
  if(GFLAGS_INCLUDE_PATH AND GFLAGS_LIBRARY)
    set(GFLAGS_FOUND TRUE)
  endif(GFLAGS_INCLUDE_PATH AND GFLAGS_LIBRARY)
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index fbcc7cc534e0..bf4c62cbd1f7 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -15,6 +15,9 @@
+ # specific language governing permissions and limitations
+ # under the License.
+ 
++find_package(GFLAGS CONFIG REQUIRED)
++find_package(protobuf CONFIG REQUIRED)
++
+ if(NOT DEBUG)
+     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG")
+     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DNDEBUG")
+@@ -43,15 +46,15 @@ SET_TARGET_PROPERTIES(brpc-static PROPERTIES OUTPUT_NAME brpc CLEAN_DIRECT_OUTPU
+ 
+ # for protoc-gen-mcpack
+ set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/output/bin)
+-    
++
+ set(protoc_gen_mcpack_SOURCES
+     ${PROJECT_SOURCE_DIR}/src/mcpack2pb/generator.cpp
+  )
+-    
+-add_executable(protoc-gen-mcpack ${protoc_gen_mcpack_SOURCES})
++
++#add_executable(protoc-gen-mcpack ${protoc_gen_mcpack_SOURCES})
+ 
+ if(BUILD_SHARED_LIBS)
+-    add_library(brpc-shared SHARED $<TARGET_OBJECTS:BUTIL_LIB> 
++    add_library(brpc-shared SHARED $<TARGET_OBJECTS:BUTIL_LIB>
+                                    $<TARGET_OBJECTS:SOURCES_LIB>
+                                    $<TARGET_OBJECTS:PROTO_LIB>)
+     target_link_libraries(brpc-shared ${DYNAMIC_LIB})
+@@ -63,7 +66,7 @@ if(BUILD_SHARED_LIBS)
+     endif()
+     SET_TARGET_PROPERTIES(brpc-shared PROPERTIES OUTPUT_NAME brpc CLEAN_DIRECT_OUTPUT 1)
+ 
+-    target_link_libraries(protoc-gen-mcpack brpc-shared ${DYNAMIC_LIB} pthread)
++    #target_link_libraries(protoc-gen-mcpack brpc-shared ${DYNAMIC_LIB} pthread)
+ 
+     install(TARGETS brpc-shared
+             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+@@ -71,7 +74,7 @@ if(BUILD_SHARED_LIBS)
+             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+             )
+ else()
+-    target_link_libraries(protoc-gen-mcpack brpc-static ${DYNAMIC_LIB} pthread)
++    #target_link_libraries(protoc-gen-mcpack brpc-static ${DYNAMIC_LIB} gflags::gflags protobuf::libprotobuf pthread)
+ endif()
+ 
+ 
