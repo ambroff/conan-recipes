@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 9edc0a681c0b..c1e92ae35fb4 100644
+index 9edc0a681c0b..e3ce2ecfaef8 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -72,31 +72,18 @@ include(GNUInstallDirs)
@@ -95,6 +95,14 @@ index 9edc0a681c0b..c1e92ae35fb4 100644
  
  if(WITH_GLOG)
      set(DYNAMIC_LIB ${DYNAMIC_LIB} ${GLOG_LIB})
+@@ -237,7 +224,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+     set(BRPC_PRIVATE_LIBS "${BRPC_PRIVATE_LIBS} -lrt")
+ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+     set(DYNAMIC_LIB ${DYNAMIC_LIB}
+-        pthread
+         "-framework CoreFoundation"
+         "-framework CoreGraphics"
+         "-framework CoreData"
 diff --git a/cmake/FindGFLAGS.cmake b/cmake/FindGFLAGS.cmake
 index dfad5fd8a097..ee45aa1e582b 100644
 --- a/cmake/FindGFLAGS.cmake

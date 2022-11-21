@@ -67,6 +67,4 @@ class BraftConan(ConanFile):
         cmake.install()
 
     def package_info(self):
-        self.cpp_info.libs = ["brpc"]
-        if self.settings.os == "Linux":
-            self.cpp_info.libs.append("pthread")
+        self.cpp_info.libs = ["braft"]
