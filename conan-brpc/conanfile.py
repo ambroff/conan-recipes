@@ -23,6 +23,7 @@ class BrpcConan(ConanFile):
 
     requires = (
         'gflags/2.2.2',
+        'glog/0.6.0',
         'protobuf/3.21.4',
         'leveldb/1.23',
         'openssl/1.1.1s',)

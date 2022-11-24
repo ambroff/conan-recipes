@@ -18,6 +18,7 @@ class BraftConan(ConanFile):
     requires = (
         'brpc/1.3.0@ambroff/testing',
         'crc32c/1.1.2',
+        'glog/0.6.0',
         'gflags/2.2.2',
         'leveldb/1.23',
     )
@@ -54,6 +55,7 @@ class BraftConan(ConanFile):
             defs={
                 'CMAKE_POSITION_INDEPENDENT_CODE': True,
                 'BRAFT_REVISION': 'a90cf6071',
+                'BRPC_WITH_GLOG': True,
             })
         return cmake
 
