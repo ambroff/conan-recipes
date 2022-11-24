@@ -1,8 +1,17 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 9edc0a681c0b..e3ce2ecfaef8 100644
+index 9edc0a681c0b..3544d78e0828 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -72,31 +72,18 @@ include(GNUInstallDirs)
+@@ -18,6 +18,8 @@
+ cmake_minimum_required(VERSION 2.8.10)
+ project(brpc C CXX)
+ 
++list(PREPEND CMAKE_PREFIX_PATH "${CMAKE_BINARY_DIR}")
++
+ option(WITH_GLOG "With glog" OFF)
+ option(WITH_MESALINK "With MesaLink" OFF)
+ option(DEBUG "Print debug logs" OFF)
+@@ -72,31 +74,18 @@ include(GNUInstallDirs)
  
  configure_file(${PROJECT_SOURCE_DIR}/config.h.in ${PROJECT_SOURCE_DIR}/src/butil/config.h @ONLY)
  
@@ -38,7 +47,7 @@ index 9edc0a681c0b..e3ce2ecfaef8 100644
  if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
      include(CheckFunctionExists)
      CHECK_FUNCTION_EXISTS(clock_gettime HAVE_CLOCK_GETTIME)
-@@ -144,7 +131,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+@@ -144,7 +133,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
      endif()
  endif()
  
@@ -47,7 +56,22 @@ index 9edc0a681c0b..e3ce2ecfaef8 100644
  find_package(Threads REQUIRED)
  
  find_path(LEVELDB_INCLUDE_PATH NAMES leveldb/db.h)
-@@ -182,7 +169,7 @@ if(WITH_MESALINK)
+@@ -163,12 +152,8 @@ if(WITH_SNAPPY)
+ endif()
+ 
+ if(WITH_GLOG)
+-    find_path(GLOG_INCLUDE_PATH NAMES glog/logging.h)
+-    find_library(GLOG_LIB NAMES glog)
+-    if((NOT GLOG_INCLUDE_PATH) OR (NOT GLOG_LIB))
+-        message(FATAL_ERROR "Fail to find glog")
+-    endif()
+-    include_directories(${GLOG_INCLUDE_PATH})
++    find_package(glog CONFIG REQUIRED)
++    include_directories(${glog_INCLUDE_DIR})
+ endif()
+ 
+ if(WITH_MESALINK)
+@@ -182,7 +167,7 @@ if(WITH_MESALINK)
      include_directories(${MESALINK_INCLUDE_PATH})
  endif()
  
@@ -56,7 +80,7 @@ index 9edc0a681c0b..e3ce2ecfaef8 100644
  if(NOT PROTOC_LIB)
      message(FATAL_ERROR "Fail to find protoc lib")
  endif()
-@@ -196,31 +183,31 @@ endif()
+@@ -196,35 +181,35 @@ endif()
  find_package(OpenSSL)
  
  include_directories(
@@ -94,8 +118,14 @@ index 9edc0a681c0b..e3ce2ecfaef8 100644
 +set(BRPC_PRIVATE_LIBS "-lgflags -lprotobuf -lleveldb -lprotoc -ldl -lz")
  
  if(WITH_GLOG)
-     set(DYNAMIC_LIB ${DYNAMIC_LIB} ${GLOG_LIB})
-@@ -237,7 +224,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+-    set(DYNAMIC_LIB ${DYNAMIC_LIB} ${GLOG_LIB})
+-    set(BRPC_PRIVATE_LIBS "${BRPC_PRIVATE_LIBS} -lglog")
++    set(DYNAMIC_LIB ${DYNAMIC_LIB} glog::glog)
++    set(BRPC_PRIVATE_LIBS "${BRPC_PRIVATE_LIBS} glog::glog")
+ endif()
+ 
+ if(WITH_SNAPPY)
+@@ -237,7 +222,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
      set(BRPC_PRIVATE_LIBS "${BRPC_PRIVATE_LIBS} -lrt")
  elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
      set(DYNAMIC_LIB ${DYNAMIC_LIB}
@@ -118,20 +148,21 @@ index dfad5fd8a097..ee45aa1e582b 100644
    set(GFLAGS_FOUND TRUE)
  endif(GFLAGS_INCLUDE_PATH AND GFLAGS_LIBRARY)
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index fbcc7cc534e0..bf4c62cbd1f7 100644
+index fbcc7cc534e0..7cf6d96ea56e 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
-@@ -15,6 +15,9 @@
+@@ -15,6 +15,10 @@
  # specific language governing permissions and limitations
  # under the License.
  
 +find_package(GFLAGS CONFIG REQUIRED)
++find_package(glog CONFIG REQUIRED)
 +find_package(protobuf CONFIG REQUIRED)
 +
  if(NOT DEBUG)
      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNDEBUG")
      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DNDEBUG")
-@@ -43,15 +46,15 @@ SET_TARGET_PROPERTIES(brpc-static PROPERTIES OUTPUT_NAME brpc CLEAN_DIRECT_OUTPU
+@@ -43,27 +47,27 @@ SET_TARGET_PROPERTIES(brpc-static PROPERTIES OUTPUT_NAME brpc CLEAN_DIRECT_OUTPU
  
  # for protoc-gen-mcpack
  set(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/output/bin)
@@ -151,7 +182,12 @@ index fbcc7cc534e0..bf4c62cbd1f7 100644
                                     $<TARGET_OBJECTS:SOURCES_LIB>
                                     $<TARGET_OBJECTS:PROTO_LIB>)
      target_link_libraries(brpc-shared ${DYNAMIC_LIB})
-@@ -63,7 +66,7 @@ if(BUILD_SHARED_LIBS)
+     if(BRPC_WITH_GLOG)
+-        target_link_libraries(brpc-shared ${GLOG_LIB})
++        target_link_libraries(brpc-shared glog::glog)
+     endif()
+     if(BRPC_WITH_THRIFT)
+         target_link_libraries(brpc-shared thrift)
      endif()
      SET_TARGET_PROPERTIES(brpc-shared PROPERTIES OUTPUT_NAME brpc CLEAN_DIRECT_OUTPUT 1)
  
@@ -160,11 +196,12 @@ index fbcc7cc534e0..bf4c62cbd1f7 100644
  
      install(TARGETS brpc-shared
              RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-@@ -71,7 +74,7 @@ if(BUILD_SHARED_LIBS)
+@@ -71,7 +75,8 @@ if(BUILD_SHARED_LIBS)
              ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
              )
  else()
 -    target_link_libraries(protoc-gen-mcpack brpc-static ${DYNAMIC_LIB} pthread)
++    target_link_libraries(brpc-static glog::glog)
 +    #target_link_libraries(protoc-gen-mcpack brpc-static ${DYNAMIC_LIB} gflags::gflags protobuf::libprotobuf pthread)
  endif()
  

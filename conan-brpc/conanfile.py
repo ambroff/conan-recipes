@@ -66,6 +66,7 @@ class BrpcConan(ConanFile):
                 'CMAKE_POSITION_INDEPENDENT_CODE': True,
                 'protobuf_MODULE_COMPATIBLE': True,
                 'BUILD_BRPC_TOOLS': False,
+                'WITH_GLOG': True,
             })
         return cmake
 
